@@ -1,13 +1,13 @@
-import dao.ComplaintDAO;
-import dao.ComplaintDAOImpl;
+import dao.CertificateDAO;
+import dao.CertificateDAOImpl;
 import dao.UserDAO;
 import dao.UserDAOImpl;
 import database.DatabaseConnection;
-import model.Complaint;
+import model.CertificateApplication;
 import model.Role;
 import model.User;
-import model.enums.ComplaintCategory;
-import model.enums.ComplaintStatus;
+import model.enums.CertificateType;
+import model.enums.RequestStatus;
 import util.PasswordUtil;
 
 import java.sql.Connection;
@@ -20,66 +20,49 @@ public class Main {
         System.out.println("=== Smart Municipality Management System ===");
 
         UserDAO userDAO = new UserDAOImpl();
-        ComplaintDAO complaintDAO = new ComplaintDAOImpl();
+        CertificateDAO certificateDAO = new CertificateDAOImpl();
 
-        // 1. Ensure User exists
+        // 1. Ensure User & Citizen Profile exist
         String testEmail = "citizen@example.com";
         User user = userDAO.findByEmail(testEmail).orElseGet(() -> {
             User newUser = new User("Test Citizen", testEmail, PasswordUtil.hashPassword("password123"), "9800000000", Role.CITIZEN);
             userDAO.registerUser(newUser);
-            System.out.println("✅ Registered new User ID: " + newUser.getUserId());
             return newUser;
         });
 
-        // 2. Ensure Citizen Profile exists in 'citizens' table
         int citizenId = ensureCitizenProfileExists(user.getUserId());
 
-        // 3. File a new complaint using valid citizenId
-        Complaint newComplaint = new Complaint(
+        // 2. Submit Certificate Application
+        CertificateApplication app = new CertificateApplication(
                 citizenId,
-                ComplaintCategory.ROAD,
-                "Potholes on Main Street",
-                "Large potholes near Ward 4 office causing severe traffic delay.",
-                4
+                CertificateType.RESIDENCE,
+                "Requesting official residence certificate for ward 4 household registration."
         );
 
-        boolean created = complaintDAO.createComplaint(newComplaint);
-        if (created) {
-            System.out.println("✅ Complaint Filed Successfully! Ticket ID: " + newComplaint.getComplaintId());
+        boolean applied = certificateDAO.applyForCertificate(app);
+        if (applied) {
+            System.out.println("✅ Certificate Application Submitted! Application ID: " + app.getApplicationId());
         }
 
-        // 4. Fetch and display all complaints
-        System.out.println("\n--- All System Complaints ---");
-        complaintDAO.getAllComplaints().forEach(c ->
-                System.out.println("Ticket #" + c.getComplaintId() + " [" + c.getCategory() + "] - " + c.getTitle() + " | Status: " + c.getStatus())
+        // 3. List all certificate applications
+        System.out.println("\n--- All Certificate Applications ---");
+        certificateDAO.getAllApplications().forEach(a ->
+                System.out.println("App #" + a.getApplicationId() + " [" + a.getCertificateType() + "] - Status: " + a.getStatus() + " | Details: " + a.getDetails())
         );
-
-        // 5. Update status to IN_PROGRESS
-        if (newComplaint.getComplaintId() > 0) {
-            boolean updated = complaintDAO.updateComplaintStatus(newComplaint.getComplaintId(), ComplaintStatus.IN_PROGRESS);
-            if (updated) {
-                System.out.println("\n✅ Ticket #" + newComplaint.getComplaintId() + " updated to IN_PROGRESS");
-            }
-        }
     }
 
-    // Helper method to insert citizen record if missing
     private static int ensureCitizenProfileExists(int userId) {
         String selectQuery = "SELECT citizen_id FROM citizens WHERE user_id = ?";
         String insertQuery = "INSERT INTO citizens (user_id, citizenship_number, ward_number, address) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection()) {
-            // Check if already exists
             try (PreparedStatement stmt = conn.prepareStatement(selectQuery)) {
                 stmt.setInt(1, userId);
                 try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        return rs.getInt("citizen_id");
-                    }
+                    if (rs.next()) return rs.getInt("citizen_id");
                 }
             }
 
-            // Insert new citizen record
             try (PreparedStatement stmt = conn.prepareStatement(insertQuery, Statement.RETURN_GENERATED_KEYS)) {
                 stmt.setInt(1, userId);
                 stmt.setString(2, "CIT-100" + userId);
@@ -88,11 +71,7 @@ public class Main {
                 stmt.executeUpdate();
 
                 try (ResultSet rs = stmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        int cId = rs.getInt(1);
-                        System.out.println("✅ Created Citizen Profile ID: " + cId);
-                        return cId;
-                    }
+                    if (rs.next()) return rs.getInt(1);
                 }
             }
         } catch (Exception e) {
