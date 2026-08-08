@@ -80,3 +80,14 @@ CREATE TABLE public_notices (
                                 posted_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                 FOREIGN KEY (posted_by) REFERENCES employees(employee_id)
 );
+
+CREATE TABLE IF NOT EXISTS tax_payments (
+                                            payment_id INT AUTO_INCREMENT PRIMARY KEY,
+                                            citizen_id INT NOT NULL,
+                                            tax_type VARCHAR(50) NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    transaction_ref VARCHAR(100) NOT NULL UNIQUE,
+    status VARCHAR(20) DEFAULT 'COMPLETED',
+    paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (citizen_id) REFERENCES citizens(citizen_id) ON DELETE CASCADE
+    );

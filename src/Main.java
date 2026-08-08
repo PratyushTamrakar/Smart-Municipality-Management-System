@@ -1,26 +1,26 @@
-import dao.CertificateDAO;
-import dao.CertificateDAOImpl;
+import dao.TaxDAO;
+import dao.TaxDAOImpl;
 import dao.UserDAO;
 import dao.UserDAOImpl;
 import database.DatabaseConnection;
-import model.CertificateApplication;
 import model.Role;
+import model.TaxPayment;
 import model.User;
-import model.enums.CertificateType;
-import model.enums.RequestStatus;
+import model.enums.TaxType;
 import util.PasswordUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.UUID;
 
 public class Main {
     public static void main(String[] args) {
         System.out.println("=== Smart Municipality Management System ===");
 
         UserDAO userDAO = new UserDAOImpl();
-        CertificateDAO certificateDAO = new CertificateDAOImpl();
+        TaxDAO taxDAO = new TaxDAOImpl();
 
         // 1. Ensure User & Citizen Profile exist
         String testEmail = "citizen@example.com";
@@ -32,23 +32,22 @@ public class Main {
 
         int citizenId = ensureCitizenProfileExists(user.getUserId());
 
-        // 2. Submit Certificate Application
-        CertificateApplication app = new CertificateApplication(
-                citizenId,
-                CertificateType.RESIDENCE,
-                "Requesting official residence certificate for ward 4 household registration."
-        );
+        // 2. Record Property Tax Payment
+        String txnRef = "TXN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        TaxPayment propertyTax = new TaxPayment(citizenId, TaxType.PROPERTY_TAX, 2500.00, txnRef);
 
-        boolean applied = certificateDAO.applyForCertificate(app);
-        if (applied) {
-            System.out.println("✅ Certificate Application Submitted! Application ID: " + app.getApplicationId());
+        if (taxDAO.recordTaxPayment(propertyTax)) {
+            System.out.println("✅ Property Tax Payment Recorded! Transaction Ref: " + propertyTax.getTransactionRef());
         }
 
-        // 3. List all certificate applications
-        System.out.println("\n--- All Certificate Applications ---");
-        certificateDAO.getAllApplications().forEach(a ->
-                System.out.println("App #" + a.getApplicationId() + " [" + a.getCertificateType() + "] - Status: " + a.getStatus() + " | Details: " + a.getDetails())
-        );
+        // 3. Record Business Tax Payment
+        String txnRef2 = "TXN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        TaxPayment businessTax = new TaxPayment(citizenId, TaxType.BUSINESS_TAX, 5000.00, txnRef2);
+        taxDAO.recordTaxPayment(businessTax);
+
+        // 4. Fetch revenue total
+        System.out.println("\n--- Revenue Dashboard ---");
+        System.out.println("💰 Total Revenue Collected: NPR " + taxDAO.getTotalRevenueCollected());
     }
 
     private static int ensureCitizenProfileExists(int userId) {
