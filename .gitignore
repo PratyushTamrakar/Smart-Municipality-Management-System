@@ -1,0 +1,13 @@
+# IntelliJ IDEA settings
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Compiled Java files
+*.class
+
+# Operating System files
+.DS_Store
+Thumbs.db
