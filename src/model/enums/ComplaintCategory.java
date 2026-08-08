@@ -6,5 +6,7 @@ public enum ComplaintCategory {
     DRAINAGE,
     ROAD,
     STREETLIGHT,
-    OTHER
+    OTHER,
+    WASTE,
+    ELECTRICITY
 }
