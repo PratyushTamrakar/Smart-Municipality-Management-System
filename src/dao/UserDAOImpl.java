@@ -1,30 +1,31 @@
 package dao;
 
-import database.DatabaseConnection;
-import model.Role;
 import model.User;
+import model.enums.Role;
+import org.mindrot.jbcrypt.BCrypt;
+import util.DatabaseConnection;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 public class UserDAOImpl implements UserDAO {
 
     @Override
     public boolean registerUser(User user) {
-        String query = "INSERT INTO users (full_name, email, password_hash, phone_number, role) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            // Hash raw password before saving to MySQL
+            String hashedPassword = BCrypt.hashpw(user.getPassword(), BCrypt.gensalt());
 
             stmt.setString(1, user.getFullName());
             stmt.setString(2, user.getEmail());
-            stmt.setString(3, user.getPasswordHash());
-            stmt.setString(4, user.getPhoneNumber());
-            stmt.setString(5, user.getRole().name());
+            stmt.setString(3, hashedPassword);
+            stmt.setString(4, Role.CITIZEN.name());
 
-            int rowsAffected = stmt.executeUpdate();
-            if (rowsAffected > 0) {
+            int affectedRows = stmt.executeUpdate();
+            if (affectedRows > 0) {
                 try (ResultSet rs = stmt.getGeneratedKeys()) {
                     if (rs.next()) {
                         user.setUserId(rs.getInt(1));
@@ -33,105 +34,67 @@ public class UserDAOImpl implements UserDAO {
                 return true;
             }
         } catch (SQLException e) {
-            System.err.println("❌ Error registering user: " + e.getMessage());
+            e.printStackTrace();
         }
         return false;
     }
 
     @Override
-    public Optional<User> findByEmail(String email) {
-        String query = "SELECT * FROM users WHERE email = ?";
+    public Optional<User> login(String email, String password) {
+        String sql = "SELECT * FROM users WHERE email = ?";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, email);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return Optional.of(mapResultSetToUser(rs));
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                String storedPassword = rs.getString("password");
+
+                // Check BCrypt hash match or fallback for plain-text legacy entries
+                boolean matches = false;
+                if (storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$")) {
+                    matches = BCrypt.checkpw(password, storedPassword);
+                } else {
+                    matches = password.equals(storedPassword); // Legacy fallback
+                }
+
+                if (matches) {
+                    User user = new User();
+                    user.setUserId(rs.getInt("user_id"));
+                    user.setFullName(rs.getString("full_name"));
+                    user.setEmail(rs.getString("email"));
+                    user.setPassword(storedPassword);
+                    user.setRole(Role.valueOf(rs.getString("role")));
+                    return Optional.of(user);
                 }
             }
         } catch (SQLException e) {
-            System.err.println("❌ Error finding user by email: " + e.getMessage());
+            e.printStackTrace();
         }
         return Optional.empty();
     }
 
     @Override
-    public Optional<User> findById(int userId) {
-        String query = "SELECT * FROM users WHERE user_id = ?";
+    public Optional<User> getUserById(int userId) {
+        String sql = "SELECT * FROM users WHERE user_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, userId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return Optional.of(mapResultSetToUser(rs));
-                }
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                User user = new User();
+                user.setUserId(rs.getInt("user_id"));
+                user.setFullName(rs.getString("full_name"));
+                user.setEmail(rs.getString("email"));
+                user.setRole(Role.valueOf(rs.getString("role")));
+                return Optional.of(user);
             }
         } catch (SQLException e) {
-            System.err.println("❌ Error finding user by ID: " + e.getMessage());
+            e.printStackTrace();
         }
         return Optional.empty();
-    }
-
-    @Override
-    public List<User> getAllUsers() {
-        List<User> users = new ArrayList<>();
-        String query = "SELECT * FROM users";
-        try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
-
-            while (rs.next()) {
-                users.add(mapResultSetToUser(rs));
-            }
-        } catch (SQLException e) {
-            System.err.println("❌ Error retrieving all users: " + e.getMessage());
-        }
-        return users;
-    }
-
-    @Override
-    public boolean updateUser(User user) {
-        String query = "UPDATE users SET full_name = ?, phone_number = ?, role = ? WHERE user_id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            stmt.setString(1, user.getFullName());
-            stmt.setString(2, user.getPhoneNumber());
-            stmt.setString(3, user.getRole().name());
-            stmt.setInt(4, user.getUserId());
-
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("❌ Error updating user: " + e.getMessage());
-        }
-        return false;
-    }
-
-    @Override
-    public boolean deleteUser(int userId) {
-        String query = "DELETE FROM users WHERE user_id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            stmt.setInt(1, userId);
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("❌ Error deleting user: " + e.getMessage());
-        }
-        return false;
-    }
-
-    private User mapResultSetToUser(ResultSet rs) throws SQLException {
-        return new User(
-                rs.getInt("user_id"),
-                rs.getString("full_name"),
-                rs.getString("email"),
-                rs.getString("password_hash"),
-                rs.getString("phone_number"),
-                Role.valueOf(rs.getString("role")),
-                rs.getTimestamp("created_at")
-        );
     }
 }

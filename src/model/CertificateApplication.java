@@ -1,40 +1,26 @@
 package model;
 
-import model.enums.CertificateType;
-import model.enums.RequestStatus;
+import model.enums.ComplaintStatus; // Reuse PENDING / APPROVED / REJECTED or create a new enum
+
 import java.sql.Timestamp;
 
 public class CertificateApplication {
     private int applicationId;
     private int citizenId;
-    private CertificateType certificateType;
+    private String certificateType;
+    private String applicantName;
     private String details;
-    private RequestStatus status;
-    private Timestamp appliedDate;
-    private Integer reviewedByOfficerId; // Nullable until an officer reviews it
+    private String status; // PENDING, APPROVED, REJECTED
+    private Timestamp appliedAt;
 
-    // Default Constructor
     public CertificateApplication() {}
 
-    // Constructor for submitting a new application
-    public CertificateApplication(int citizenId, CertificateType certificateType, String details) {
+    public CertificateApplication(int citizenId, String certificateType, String applicantName, String details) {
         this.citizenId = citizenId;
         this.certificateType = certificateType;
+        this.applicantName = applicantName;
         this.details = details;
-        this.status = RequestStatus.SUBMITTED;
-    }
-
-    // Full Constructor
-    public CertificateApplication(int applicationId, int citizenId, CertificateType certificateType,
-                                  String details, RequestStatus status, Timestamp appliedDate,
-                                  Integer reviewedByOfficerId) {
-        this.applicationId = applicationId;
-        this.citizenId = citizenId;
-        this.certificateType = certificateType;
-        this.details = details;
-        this.status = status;
-        this.appliedDate = appliedDate;
-        this.reviewedByOfficerId = reviewedByOfficerId;
+        this.status = "PENDING";
     }
 
     // Getters and Setters
@@ -44,18 +30,18 @@ public class CertificateApplication {
     public int getCitizenId() { return citizenId; }
     public void setCitizenId(int citizenId) { this.citizenId = citizenId; }
 
-    public CertificateType getCertificateType() { return certificateType; }
-    public void setCertificateType(CertificateType certificateType) { this.certificateType = certificateType; }
+    public String getCertificateType() { return certificateType; }
+    public void setCertificateType(String certificateType) { this.certificateType = certificateType; }
+
+    public String getApplicantName() { return applicantName; }
+    public void setApplicantName(String applicantName) { this.applicantName = applicantName; }
 
     public String getDetails() { return details; }
     public void setDetails(String details) { this.details = details; }
 
-    public RequestStatus getStatus() { return status; }
-    public void setStatus(RequestStatus status) { this.status = status; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
-    public Timestamp getAppliedDate() { return appliedDate; }
-    public void setAppliedDate(Timestamp appliedDate) { this.appliedDate = appliedDate; }
-
-    public Integer getReviewedByOfficerId() { return reviewedByOfficerId; }
-    public void setReviewedByOfficerId(Integer reviewedByOfficerId) { this.reviewedByOfficerId = reviewedByOfficerId; }
+    public Timestamp getAppliedAt() { return appliedAt; }
+    public void setAppliedAt(Timestamp appliedAt) { this.appliedAt = appliedAt; }
 }

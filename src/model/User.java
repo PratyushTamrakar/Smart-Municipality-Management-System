@@ -1,35 +1,15 @@
 package model;
 
-import java.sql.Timestamp;
+import model.enums.Role;
 
 public class User {
     private int userId;
     private String fullName;
     private String email;
-    private String passwordHash;
-    private String phoneNumber;
-    private Role role;
-    private Timestamp createdAt;
+    private String password;
+    private Role role = Role.CITIZEN;
 
     public User() {}
-
-    public User(String fullName, String email, String passwordHash, String phoneNumber, Role role) {
-        this.fullName = fullName;
-        this.email = email;
-        this.passwordHash = passwordHash;
-        this.phoneNumber = phoneNumber;
-        this.role = role;
-    }
-
-    public User(int userId, String fullName, String email, String passwordHash, String phoneNumber, Role role, Timestamp createdAt) {
-        this.userId = userId;
-        this.fullName = fullName;
-        this.email = email;
-        this.passwordHash = passwordHash;
-        this.phoneNumber = phoneNumber;
-        this.role = role;
-        this.createdAt = createdAt;
-    }
 
     public int getUserId() { return userId; }
     public void setUserId(int userId) { this.userId = userId; }
@@ -40,15 +20,9 @@ public class User {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
-    public String getPasswordHash() { return passwordHash; }
-    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
-
-    public String getPhoneNumber() { return phoneNumber; }
-    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
-
-    public Timestamp getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
 }

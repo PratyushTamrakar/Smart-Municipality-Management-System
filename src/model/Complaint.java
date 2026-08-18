@@ -2,7 +2,7 @@ package model;
 
 import model.enums.ComplaintCategory;
 import model.enums.ComplaintStatus;
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 public class Complaint {
     private int complaintId;
@@ -10,40 +10,20 @@ public class Complaint {
     private ComplaintCategory category;
     private String title;
     private String description;
-    private int locationWard;
-    private ComplaintStatus status;
-    private Integer assignedEmployeeId; // Nullable if not assigned yet
-    private Timestamp createdAt;
+    private int wardNumber;
+    private ComplaintStatus status = ComplaintStatus.PENDING;
+    private LocalDateTime createdAt;
 
-    // Default Constructor
     public Complaint() {}
 
-    // Constructor for creating new complaint
-    public Complaint(int citizenId, ComplaintCategory category, String title, String description, int locationWard) {
+    public Complaint(int citizenId, ComplaintCategory category, String title, String description, int wardNumber) {
         this.citizenId = citizenId;
         this.category = category;
         this.title = title;
         this.description = description;
-        this.locationWard = locationWard;
-        this.status = ComplaintStatus.PENDING;
+        this.wardNumber = wardNumber;
     }
 
-    // Full Constructor
-    public Complaint(int complaintId, int citizenId, ComplaintCategory category, String title,
-                     String description, int locationWard, ComplaintStatus status,
-                     Integer assignedEmployeeId, Timestamp createdAt) {
-        this.complaintId = complaintId;
-        this.citizenId = citizenId;
-        this.category = category;
-        this.title = title;
-        this.description = description;
-        this.locationWard = locationWard;
-        this.status = status;
-        this.assignedEmployeeId = assignedEmployeeId;
-        this.createdAt = createdAt;
-    }
-
-    // Getters and Setters
     public int getComplaintId() { return complaintId; }
     public void setComplaintId(int complaintId) { this.complaintId = complaintId; }
 
@@ -59,15 +39,12 @@ public class Complaint {
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
 
-    public int getLocationWard() { return locationWard; }
-    public void setLocationWard(int locationWard) { this.locationWard = locationWard; }
+    public int getWardNumber() { return wardNumber; }
+    public void setWardNumber(int wardNumber) { this.wardNumber = wardNumber; }
 
     public ComplaintStatus getStatus() { return status; }
     public void setStatus(ComplaintStatus status) { this.status = status; }
 
-    public Integer getAssignedEmployeeId() { return assignedEmployeeId; }
-    public void setAssignedEmployeeId(Integer assignedEmployeeId) { this.assignedEmployeeId = assignedEmployeeId; }
-
-    public Timestamp getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

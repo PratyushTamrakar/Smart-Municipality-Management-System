@@ -1,255 +1,395 @@
 package util;
 
-import dao.*;
-import model.*;
-import model.enums.*;
+import dao.CertificateDAO;
+import dao.CertificateDAOImpl;
+import dao.ComplaintDAO;
+import dao.ComplaintDAOImpl;
+import dao.TaxDAO;
+import dao.TaxDAOImpl;
+import dao.UserDAO;
+import dao.UserDAOImpl;
+import model.CertificateApplication;
+import model.Complaint;
+import model.TaxPayment;
+import model.User;
+import model.enums.ComplaintCategory;
+import model.enums.ComplaintStatus;
+import model.enums.Role;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Scanner;
-import java.util.UUID;
 
 public class ConsoleMenu {
 
-    private final Scanner scanner = new Scanner(System.in);
     private final UserDAO userDAO = new UserDAOImpl();
     private final ComplaintDAO complaintDAO = new ComplaintDAOImpl();
     private final CertificateDAO certificateDAO = new CertificateDAOImpl();
     private final TaxDAO taxDAO = new TaxDAOImpl();
-
-    private User currentUser = null;
+    private final Scanner scanner = new Scanner(System.in);
+    private User loggedInUser = null;
 
     public void start() {
         while (true) {
-            System.out.println("\n=========================================");
-            System.out.println("  SMART MUNICIPALITY MANAGEMENT SYSTEM   ");
-            System.out.println("=========================================");
-
-            if (currentUser == null) {
-                System.out.println("1. Register Account");
-                System.out.println("2. Login");
-                System.out.println("0. Exit");
-                System.out.print("Select an option: ");
-
-                String choice = scanner.nextLine().trim();
-                switch (choice) {
-                    case "1" -> handleRegister();
-                    case "2" -> handleLogin();
-                    case "0" -> {
-                        System.out.println("Exiting system. Goodbye!");
-                        return;
-                    }
-                    default -> System.out.println("❌ Invalid choice. Try again.");
-                }
+            if (loggedInUser == null) {
+                showAuthMenu();
+            } else if (loggedInUser.getRole() == Role.CITIZEN) {
+                showCitizenMenu();
             } else {
-                showDashboard();
+                showOfficerMenu();
             }
         }
     }
 
-    private void handleRegister() {
-        System.out.println("\n--- Register User ---");
-        System.out.print("Full Name: ");
-        String name = scanner.nextLine().trim();
-        System.out.print("Email: ");
-        String email = scanner.nextLine().trim();
-        System.out.print("Password: ");
-        String pass = scanner.nextLine().trim();
-        System.out.print("Phone Number: ");
-        String phone = scanner.nextLine().trim();
+    private void showAuthMenu() {
+        System.out.println("\n==========================================");
+        System.out.println("  SMART MUNICIPALITY MANAGEMENT SYSTEM  ");
+        System.out.println("==========================================");
+        System.out.println("1. Login");
+        System.out.println("2. Register Citizen Account");
+        System.out.println("0. Exit");
+        System.out.print("Select choice: ");
 
-        System.out.println("Select Role: 1. CITIZEN  2. OFFICER  3. ADMIN");
-        System.out.print("Choice: ");
-        String roleChoice = scanner.nextLine().trim();
-        Role role = switch (roleChoice) {
-            case "2" -> Role.OFFICER;
-            case "3" -> Role.ADMIN;
-            default -> Role.CITIZEN;
-        };
+        int choice = scanner.nextInt();
+        scanner.nextLine();
 
-        User user = new User(name, email, PasswordUtil.hashPassword(pass), phone, role);
-        if (userDAO.registerUser(user)) {
-            System.out.println("✅ Registration successful! User ID: " + user.getUserId());
+        switch (choice) {
+            case 1 -> login();
+            case 2 -> register();
+            case 0 -> {
+                System.out.println("Thank you for using Smart Municipality System. Goodbye!");
+                System.exit(0);
+            }
+            default -> System.out.println("❌ Invalid choice!");
         }
     }
 
-    private void handleLogin() {
-        System.out.println("\n--- User Login ---");
-        System.out.print("Email: ");
-        String email = scanner.nextLine().trim();
-        System.out.print("Password: ");
-        String pass = scanner.nextLine().trim();
+    private void login() {
+        System.out.print("Enter Email: ");
+        String email = scanner.nextLine();
+        System.out.print("Enter Password: ");
+        String password = scanner.nextLine();
 
-        Optional<User> userOpt = userDAO.findByEmail(email);
+        var userOpt = userDAO.login(email, password);
         if (userOpt.isPresent()) {
-            User user = userOpt.get();
-            if (PasswordUtil.verifyPassword(pass, user.getPasswordHash())) {
-                currentUser = user;
-                System.out.println("✅ Welcome back, " + user.getFullName() + " (" + user.getRole() + ")");
-            } else {
-                System.out.println("❌ Invalid password!");
-            }
+            loggedInUser = userOpt.get();
+            System.out.println("✅ Login successful! Welcome, " + loggedInUser.getFullName() + " (" + loggedInUser.getRole() + ")");
         } else {
-            System.out.println("❌ User with this email does not exist!");
+            System.out.println("❌ Invalid credentials!");
         }
     }
 
-    private void showDashboard() {
-        System.out.println("\n--- LOGGED IN AS: " + currentUser.getFullName() + " [" + currentUser.getRole() + "] ---");
+    private void register() {
+        System.out.print("Enter Full Name: ");
+        String name = scanner.nextLine();
+        System.out.print("Enter Email: ");
+        String email = scanner.nextLine();
+        System.out.print("Enter Password: ");
+        String password = scanner.nextLine();
 
-        if (currentUser.getRole() == Role.CITIZEN) {
-            showCitizenMenu();
+        User user = new User();
+        user.setFullName(name);
+        user.setEmail(email);
+        user.setPassword(password);
+
+        if (userDAO.registerUser(user)) {
+            System.out.println("✅ Registration successful! Please log in.");
         } else {
-            showOfficerMenu();
+            System.out.println("❌ Registration failed!");
         }
     }
 
     private void showCitizenMenu() {
+        System.out.println("\n--- CITIZEN PANEL: " + loggedInUser.getFullName() + " ---");
         System.out.println("1. File a Complaint");
         System.out.println("2. View My Complaints");
         System.out.println("3. Apply for Certificate");
         System.out.println("4. View My Certificate Applications");
         System.out.println("5. Pay Municipal Tax");
-        System.out.println("6. View Tax History");
+        System.out.println("6. View Tax Payment History");
         System.out.println("0. Logout");
         System.out.print("Select choice: ");
 
-        String choice = scanner.nextLine().trim();
+        int choice = scanner.nextInt();
+        scanner.nextLine();
+
         switch (choice) {
-            case "1" -> fileComplaint();
-            case "2" -> viewMyComplaints();
-            case "3" -> applyCertificate();
-            case "4" -> viewMyCertificates();
-            case "5" -> payTax();
-            case "6" -> viewMyTaxes();
-            case "0" -> logout();
-            default -> System.out.println("❌ Invalid option.");
+            case 1 -> fileComplaint();
+            case 2 -> viewMyComplaints();
+            case 3 -> applyForCertificate();
+            case 4 -> viewMyCertificates();
+            case 5 -> payTax();
+            case 6 -> viewMyTaxHistory();
+            case 0 -> {
+                loggedInUser = null;
+                System.out.println("Logged out successfully.");
+            }
+            default -> System.out.println("❌ Invalid choice!");
         }
     }
 
     private void showOfficerMenu() {
+        System.out.println("\n--- OFFICER / ADMIN PANEL: " + loggedInUser.getFullName() + " ---");
         System.out.println("1. View All Complaints");
-        System.out.println("2. View All Certificate Applications");
-        System.out.println("3. View Total Municipal Revenue");
+        System.out.println("2. Update Complaint Status");
+        System.out.println("3. View All Certificate Applications");
+        System.out.println("4. Process Certificate Application");
+        System.out.println("5. View All System Tax Receipts");
         System.out.println("0. Logout");
         System.out.print("Select choice: ");
 
-        String choice = scanner.nextLine().trim();
+        int choice = scanner.nextInt();
+        scanner.nextLine();
+
         switch (choice) {
-            case "1" -> {
-                System.out.println("\n--- System Complaints ---");
-                complaintDAO.getAllComplaints().forEach(c ->
-                        System.out.println("Ticket #" + c.getComplaintId() + " [" + c.getCategory() + "] " + c.getTitle() + " | Status: " + c.getStatus())
-                );
+            case 1 -> viewAllComplaints();
+            case 2 -> updateComplaintStatus();
+            case 3 -> viewAllCertificates();
+            case 4 -> processCertificateApplication();
+            case 5 -> viewAllTaxReceipts();
+            case 0 -> {
+                loggedInUser = null;
+                System.out.println("Logged out successfully.");
             }
-            case "2" -> {
-                System.out.println("\n--- System Certificate Applications ---");
-                certificateDAO.getAllApplications().forEach(a ->
-                        System.out.println("App #" + a.getApplicationId() + " [" + a.getCertificateType() + "] Citizen ID: " + a.getCitizenId() + " | Status: " + a.getStatus())
-                );
-            }
-            case "3" -> System.out.println("\n💰 Total Revenue Collected: NPR " + taxDAO.getTotalRevenueCollected());
-            case "0" -> logout();
-            default -> System.out.println("❌ Invalid option.");
+            default -> System.out.println("❌ Invalid choice!");
         }
     }
 
     private void fileComplaint() {
         System.out.print("Title: ");
-        String title = scanner.nextLine().trim();
+        String title = scanner.nextLine();
+
         System.out.print("Description: ");
-        String desc = scanner.nextLine().trim();
+        String description = scanner.nextLine();
+
         System.out.print("Ward Number: ");
-        int ward = Integer.parseInt(scanner.nextLine().trim());
+        int wardNumber = scanner.nextInt();
+        scanner.nextLine();
 
         System.out.println("Category: 1. ROAD  2. WATER  3. WASTE  4. ELECTRICITY");
-        String catChoice = scanner.nextLine().trim();
-        ComplaintCategory cat = switch (catChoice) {
-            case "2" -> ComplaintCategory.WATER;
-            case "3" -> ComplaintCategory.WASTE;
-            case "4" -> ComplaintCategory.ELECTRICITY;
+        System.out.print("Select category: ");
+        int catChoice = scanner.nextInt();
+        scanner.nextLine();
+
+        ComplaintCategory category = switch (catChoice) {
+            case 1 -> ComplaintCategory.ROAD;
+            case 2 -> ComplaintCategory.WATER;
+            case 3 -> ComplaintCategory.WASTE;
+            case 4 -> ComplaintCategory.ELECTRICITY;
             default -> ComplaintCategory.ROAD;
         };
 
-        // Assumes citizen_id corresponds to user_id for CLI testing
-        Complaint c = new Complaint(currentUser.getUserId(), cat, title, desc, ward);
-        if (complaintDAO.createComplaint(c)) {
-            System.out.println("✅ Complaint filed! Ticket ID: " + c.getComplaintId());
+        Complaint complaint = new Complaint(
+                loggedInUser.getUserId(),
+                category,
+                title,
+                description,
+                wardNumber
+        );
+
+        if (complaintDAO.createComplaint(complaint)) {
+            System.out.println("✅ Complaint submitted successfully! Complaint ID: " + complaint.getComplaintId());
+        } else {
+            System.out.println("❌ Error creating complaint.");
         }
     }
 
     private void viewMyComplaints() {
-        System.out.println("\n--- My Complaints ---");
-        List<Complaint> list = complaintDAO.getComplaintsByCitizenId(currentUser.getUserId());
-        if (list.isEmpty()) {
+        List<Complaint> complaints = complaintDAO.getComplaintsByCitizenId(loggedInUser.getUserId());
+        if (complaints.isEmpty()) {
             System.out.println("No complaints found.");
         } else {
-            list.forEach(c -> System.out.println("Ticket #" + c.getComplaintId() + " [" + c.getCategory() + "] " + c.getTitle() + " | Status: " + c.getStatus()));
+            System.out.println("\n--- YOUR COMPLAINTS ---");
+            for (Complaint c : complaints) {
+                System.out.println("ID: " + c.getComplaintId() + " | Title: " + c.getTitle() +
+                        " | Category: " + c.getCategory() + " | Status: " + c.getStatus());
+            }
         }
     }
 
-    private void applyCertificate() {
-        System.out.print("Details / Purpose: ");
-        String details = scanner.nextLine().trim();
+    private void applyForCertificate() {
+        System.out.println("\nSelect Certificate Type:");
+        System.out.println("1. Birth Certificate");
+        System.out.println("2. Death Certificate");
+        System.out.println("3. Relationship Verification");
+        System.out.print("Choice: ");
+        int choice = scanner.nextInt();
+        scanner.nextLine();
 
-        System.out.println("Certificate Type: 1. BIRTH  2. DEATH  3. RESIDENCE  4. BUSINESS_REGISTRATION");
-        String typeChoice = scanner.nextLine().trim();
-        CertificateType type = switch (typeChoice) {
-            case "2" -> CertificateType.DEATH;
-            case "3" -> CertificateType.RESIDENCE;
-            case "4" -> CertificateType.BUSINESS_REGISTRATION;
-            default -> CertificateType.BIRTH;
+        String certType = switch (choice) {
+            case 1 -> "BIRTH_CERTIFICATE";
+            case 2 -> "DEATH_CERTIFICATE";
+            case 3 -> "RELATIONSHIP_VERIFICATION";
+            default -> "BIRTH_CERTIFICATE";
         };
 
-        CertificateApplication app = new CertificateApplication(currentUser.getUserId(), type, details);
+        System.out.print("Applicant Full Name: ");
+        String applicantName = scanner.nextLine();
+
+        System.out.print("Additional Details / Remarks: ");
+        String details = scanner.nextLine();
+
+        CertificateApplication app = new CertificateApplication(
+                loggedInUser.getUserId(),
+                certType,
+                applicantName,
+                details
+        );
+
         if (certificateDAO.applyForCertificate(app)) {
-            System.out.println("✅ Application submitted! Application ID: " + app.getApplicationId());
+            System.out.println("✅ Certificate application submitted successfully! Application ID: " + app.getApplicationId());
+        } else {
+            System.out.println("❌ Failed to submit certificate application.");
         }
     }
 
     private void viewMyCertificates() {
-        System.out.println("\n--- My Certificate Applications ---");
-        List<CertificateApplication> list = certificateDAO.getApplicationsByCitizenId(currentUser.getUserId());
+        List<CertificateApplication> list = certificateDAO.getApplicationsByCitizenId(loggedInUser.getUserId());
         if (list.isEmpty()) {
-            System.out.println("No applications found.");
+            System.out.println("No certificate applications found.");
         } else {
-            list.forEach(a -> System.out.println("App #" + a.getApplicationId() + " [" + a.getCertificateType() + "] Status: " + a.getStatus()));
+            System.out.println("\n--- YOUR CERTIFICATE APPLICATIONS ---");
+            for (CertificateApplication app : list) {
+                System.out.println("ID: " + app.getApplicationId() + " | Type: " + app.getCertificateType() +
+                        " | Applicant: " + app.getApplicantName() + " | Status: " + app.getStatus());
+            }
         }
     }
 
     private void payTax() {
-        System.out.print("Amount (NPR): ");
-        double amount = Double.parseDouble(scanner.nextLine().trim());
+        System.out.println("\nSelect Tax Type:");
+        System.out.println("1. Property Tax");
+        System.out.println("2. Business Tax");
+        System.out.println("3. Vehicle Tax");
+        System.out.print("Choice: ");
+        int choice = scanner.nextInt();
+        scanner.nextLine();
 
-        System.out.println("Tax Type: 1. PROPERTY_TAX  2. BUSINESS_TAX  3. VEHICLE_TAX  4. WASTE_MANAGEMENT_FEE");
-        String taxChoice = scanner.nextLine().trim();
-        TaxType type = switch (taxChoice) {
-            case "2" -> TaxType.BUSINESS_TAX;
-            case "3" -> TaxType.VEHICLE_TAX;
-            case "4" -> TaxType.WASTE_MANAGEMENT_FEE;
-            default -> TaxType.PROPERTY_TAX;
+        String taxType = switch (choice) {
+            case 1 -> "PROPERTY_TAX";
+            case 2 -> "BUSINESS_TAX";
+            case 3 -> "VEHICLE_TAX";
+            default -> "PROPERTY_TAX";
         };
 
-        String txnRef = "TXN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        TaxPayment payment = new TaxPayment(currentUser.getUserId(), type, amount, txnRef);
+        System.out.print("Enter Tax Amount to Pay: ");
+        double amount = scanner.nextDouble();
+        scanner.nextLine();
 
-        if (taxDAO.recordTaxPayment(payment)) {
-            System.out.println("✅ Payment Successful! Transaction Ref: " + txnRef);
-        }
-    }
+        TaxPayment payment = new TaxPayment(loggedInUser.getUserId(), taxType, amount);
 
-    private void viewMyTaxes() {
-        System.out.println("\n--- My Tax Payments ---");
-        List<TaxPayment> list = taxDAO.getPaymentsByCitizenId(currentUser.getUserId());
-        if (list.isEmpty()) {
-            System.out.println("No tax payment history.");
+        if (taxDAO.payTax(payment)) {
+            System.out.println("✅ Tax payment successful! Receipt / Payment ID: " + payment.getPaymentId());
         } else {
-            list.forEach(p -> System.out.println("Txn #" + p.getTransactionRef() + " [" + p.getTaxType() + "] NPR " + p.getAmount() + " | Status: " + p.getStatus()));
+            System.out.println("❌ Failed to process tax payment.");
         }
     }
 
-    private void logout() {
-        System.out.println("👋 Logged out successfully.");
-        currentUser = null;
+    private void viewMyTaxHistory() {
+        List<TaxPayment> list = taxDAO.getPaymentsByCitizenId(loggedInUser.getUserId());
+        if (list.isEmpty()) {
+            System.out.println("No tax payment records found.");
+        } else {
+            System.out.println("\n--- YOUR TAX PAYMENT HISTORY ---");
+            for (TaxPayment p : list) {
+                System.out.println("Receipt ID: " + p.getPaymentId() + " | Type: " + p.getTaxType() +
+                        " | Amount: Rs. " + p.getAmount() + " | Status: " + p.getPaymentStatus() +
+                        " | Date: " + p.getPaymentDate());
+            }
+        }
+    }
+
+    private void viewAllComplaints() {
+        List<Complaint> complaints = complaintDAO.getAllComplaints();
+        if (complaints.isEmpty()) {
+            System.out.println("No complaints registered in system.");
+        } else {
+            System.out.println("\n--- ALL COMPLAINTS SYSTEM-WIDE ---");
+            for (Complaint c : complaints) {
+                System.out.println("ID: " + c.getComplaintId() + " | Citizen ID: " + c.getCitizenId() +
+                        " | Ward: " + c.getWardNumber() + " | Category: " + c.getCategory() +
+                        " | Status: " + c.getStatus() + " | Title: " + c.getTitle());
+            }
+        }
+    }
+
+    private void updateComplaintStatus() {
+        System.out.print("Enter Complaint ID to update: ");
+        if (!scanner.hasNextInt()) {
+            System.out.println("❌ Invalid input! Please enter a numeric Complaint ID (e.g., 1).");
+            scanner.nextLine();
+            return;
+        }
+        int complaintId = scanner.nextInt();
+        scanner.nextLine();
+
+        System.out.println("Select New Status: 1. IN_PROGRESS  2. RESOLVED  3. REJECTED");
+        System.out.print("Choice: ");
+        if (!scanner.hasNextInt()) {
+            System.out.println("❌ Invalid status choice!");
+            scanner.nextLine();
+            return;
+        }
+        int statusChoice = scanner.nextInt();
+        scanner.nextLine();
+
+        ComplaintStatus newStatus = switch (statusChoice) {
+            case 1 -> ComplaintStatus.IN_PROGRESS;
+            case 2 -> ComplaintStatus.RESOLVED;
+            case 3 -> ComplaintStatus.REJECTED;
+            default -> ComplaintStatus.PENDING;
+        };
+
+        if (complaintDAO.updateComplaintStatus(complaintId, newStatus)) {
+            System.out.println("✅ Complaint status updated successfully to " + newStatus);
+        } else {
+            System.out.println("❌ Failed to update status. Please check Complaint ID.");
+        }
+    }
+
+    private void viewAllCertificates() {
+        List<CertificateApplication> list = certificateDAO.getAllApplications();
+        if (list.isEmpty()) {
+            System.out.println("No certificate applications in the system.");
+        } else {
+            System.out.println("\n--- ALL CERTIFICATE APPLICATIONS ---");
+            for (CertificateApplication app : list) {
+                System.out.println("ID: " + app.getApplicationId() + " | Citizen ID: " + app.getCitizenId() +
+                        " | Type: " + app.getCertificateType() + " | Name: " + app.getApplicantName() +
+                        " | Status: " + app.getStatus());
+            }
+        }
+    }
+
+    private void processCertificateApplication() {
+        System.out.print("Enter Application ID to process: ");
+        int appId = scanner.nextInt();
+        scanner.nextLine();
+
+        System.out.println("Select Action: 1. APPROVE  2. REJECT");
+        System.out.print("Choice: ");
+        int actionChoice = scanner.nextInt();
+        scanner.nextLine();
+
+        String status = (actionChoice == 1) ? "APPROVED" : "REJECTED";
+
+        if (certificateDAO.updateApplicationStatus(appId, status)) {
+            System.out.println("✅ Certificate application updated to " + status);
+        } else {
+            System.out.println("❌ Failed to update application status.");
+        }
+    }
+
+    private void viewAllTaxReceipts() {
+        List<TaxPayment> list = taxDAO.getAllPayments();
+        if (list.isEmpty()) {
+            System.out.println("No tax receipts recorded in the system.");
+        } else {
+            System.out.println("\n--- ALL SYSTEM-WIDE TAX RECEIPTS ---");
+            for (TaxPayment p : list) {
+                System.out.println("Receipt ID: " + p.getPaymentId() + " | Citizen ID: " + p.getCitizenId() +
+                        " | Type: " + p.getTaxType() + " | Amount: Rs. " + p.getAmount() +
+                        " | Status: " + p.getPaymentStatus() + " | Date: " + p.getPaymentDate());
+            }
+        }
     }
 }
