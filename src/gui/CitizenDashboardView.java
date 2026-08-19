@@ -4,11 +4,15 @@ import dao.ComplaintDAO;
 import dao.ComplaintDAOImpl;
 import dao.TaxDAO;
 import dao.TaxDAOImpl;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
@@ -25,6 +29,7 @@ public class CitizenDashboardView {
     private final User citizen;
     private final ComplaintDAO complaintDAO = new ComplaintDAOImpl();
     private final TaxDAO taxDAO = new TaxDAOImpl();
+    private final ObservableList<TaxPayment> taxHistoryList = FXCollections.observableArrayList();
 
     public CitizenDashboardView(Stage stage, User citizen) {
         this.stage = stage;
@@ -42,6 +47,7 @@ public class CitizenDashboardView {
         header.setFont(Font.font("Segoe UI", FontWeight.BOLD, 16));
 
         Button logoutBtn = new Button("Logout");
+        logoutBtn.setStyle("-fx-background-color: #EF4444; -fx-text-fill: white; -fx-font-weight: bold;");
         logoutBtn.setOnAction(e -> new LoginView(stage).show());
 
         BorderPane topBar = new BorderPane();
@@ -52,18 +58,16 @@ public class CitizenDashboardView {
         // Center Content Tabs
         TabPane tabPane = new TabPane();
 
-        // Tab 1: File Complaint
         Tab complaintTab = new Tab("File Complaint", createComplaintView());
         complaintTab.setClosable(false);
 
-        // Tab 2: Pay Municipal Tax
-        Tab taxTab = new Tab("Pay Municipal Tax", createTaxView());
+        Tab taxTab = new Tab("Pay Tax & Receipts", createTaxView());
         taxTab.setClosable(false);
 
         tabPane.getTabs().addAll(complaintTab, taxTab);
         root.setCenter(tabPane);
 
-        Scene scene = new Scene(root, 600, 450);
+        Scene scene = new Scene(root, 700, 520);
         stage.setScene(scene);
         stage.show();
     }
@@ -76,7 +80,7 @@ public class CitizenDashboardView {
         titleField.setPromptText("Complaint Title");
 
         TextArea descArea = new TextArea();
-        descArea.setPromptText("Detailed Description");
+        descArea.setPromptText("Detailed Description of the Issue");
         descArea.setPrefRowCount(3);
 
         TextField wardField = new TextField();
@@ -86,24 +90,33 @@ public class CitizenDashboardView {
         categoryBox.getItems().addAll(ComplaintCategory.values());
         categoryBox.setValue(ComplaintCategory.ROAD);
 
-        Button submitBtn = new Button("Submit Complaint");
+        Button submitBtn = new Button("Submit Municipal Complaint");
+        submitBtn.setStyle("-fx-background-color: #1E3A8A; -fx-text-fill: white; -fx-font-weight: bold;");
+
         Label msg = new Label();
+        msg.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
 
         submitBtn.setOnAction(e -> {
             try {
                 int ward = Integer.parseInt(wardField.getText().trim());
                 Complaint c = new Complaint(citizen.getUserId(), categoryBox.getValue(), titleField.getText().trim(), descArea.getText().trim(), ward);
                 if (complaintDAO.createComplaint(c)) {
-                    msg.setText("✅ Complaint filed successfully!");
+                    msg.setText("✅ Complaint registered! Municipal officers will review it shortly.");
+                    msg.setTextFill(Color.GREEN);
+                    titleField.clear();
+                    descArea.clear();
+                    wardField.clear();
                 } else {
                     msg.setText("❌ Failed to file complaint.");
+                    msg.setTextFill(Color.RED);
                 }
             } catch (Exception ex) {
-                msg.setText("❌ Please enter a valid Ward Number.");
+                msg.setText("❌ Please enter a valid numerical Ward Number.");
+                msg.setTextFill(Color.RED);
             }
         });
 
-        layout.getChildren().addAll(new Label("Category:"), categoryBox, titleField, descArea, wardField, submitBtn, msg);
+        layout.getChildren().addAll(new Label("Select Category:"), categoryBox, titleField, descArea, wardField, submitBtn, msg);
         return layout;
     }
 
@@ -116,13 +129,26 @@ public class CitizenDashboardView {
         taxTypeBox.setValue("Property Tax");
 
         TextField valField = new TextField();
-        valField.setPromptText("Enter Sq Ft (Property) / Tier 1-3 (Business) / CC (Vehicle)");
+        valField.setPromptText("Sq Ft (Property) / Tier 1-3 (Business) / CC (Vehicle)");
 
         TextField wardField = new TextField();
         wardField.setPromptText("Ward Number (1-10)");
 
         Button calcBtn = new Button("Calculate & Pay Tax");
+        calcBtn.setStyle("-fx-background-color: #059669; -fx-text-fill: white; -fx-font-weight: bold;");
         Label statusLbl = new Label();
+
+        // Interactive Table View for Real-time History
+        TableView<TaxPayment> table = new TableView<>();
+        TableColumn<TaxPayment, String> typeCol = new TableColumn<>("Tax Type");
+        typeCol.setCellValueFactory(new PropertyValueFactory<>("taxType"));
+
+        TableColumn<TaxPayment, Double> amountCol = new TableColumn<>("Amount Paid (NPR)");
+        amountCol.setCellValueFactory(new PropertyValueFactory<>("amount"));
+
+        table.getColumns().addAll(typeCol, amountCol);
+        table.setItems(taxHistoryList);
+        table.setPrefHeight(150);
 
         calcBtn.setOnAction(e -> {
             try {
@@ -142,14 +168,19 @@ public class CitizenDashboardView {
                 TaxPayment payment = new TaxPayment(citizen.getUserId(), selected.toUpperCase().replace(" ", "_"), amount);
                 if (taxDAO.payTax(payment)) {
                     FileExporter.exportTaxReceipt(payment, citizen);
-                    statusLbl.setText("✅ Payment Successful! Amount: Rs. " + amount + " (Receipt Exported)");
+                    taxHistoryList.add(payment); // Instantly updates the interactive table!
+                    statusLbl.setText("✅ Paid NPR " + amount + " successfully! Receipt exported to /exports");
+                    statusLbl.setTextFill(Color.GREEN);
+                    valField.clear();
+                    wardField.clear();
                 }
             } catch (Exception ex) {
-                statusLbl.setText("❌ Invalid input parameters!");
+                statusLbl.setText("❌ Invalid parameters! Check inputs.");
+                statusLbl.setTextFill(Color.RED);
             }
         });
 
-        layout.getChildren().addAll(new Label("Select Tax Type:"), taxTypeBox, valField, wardField, calcBtn, statusLbl);
+        layout.getChildren().addAll(new Label("Select Tax Category:"), taxTypeBox, valField, wardField, calcBtn, statusLbl, new Label("Payment Activity History:"), table);
         return layout;
     }
 }
