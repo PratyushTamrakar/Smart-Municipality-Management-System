@@ -1,6 +1,5 @@
 package dao;
 
-import database.DatabaseConnection;
 import model.Complaint;
 import model.enums.ComplaintCategory;
 import model.enums.ComplaintStatus;

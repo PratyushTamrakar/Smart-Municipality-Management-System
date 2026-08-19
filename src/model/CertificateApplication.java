@@ -1,17 +1,16 @@
 package model;
 
-import model.enums.ComplaintStatus; // Reuse PENDING / APPROVED / REJECTED or create a new enum
-
 import java.sql.Timestamp;
 
 public class CertificateApplication {
+
     private int applicationId;
     private int citizenId;
     private String certificateType;
     private String applicantName;
     private String details;
-    private String status; // PENDING, APPROVED, REJECTED
-    private Timestamp appliedAt;
+    private String status;
+    private Timestamp appliedAt; // Updated field name
 
     public CertificateApplication() {}
 
