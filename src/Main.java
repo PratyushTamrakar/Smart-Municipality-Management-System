@@ -1,8 +1,16 @@
-import util.ConsoleMenu;
+import gui.LoginView;
+import javafx.application.Application;
+import javafx.stage.Stage;
 
-public class Main {
+public class Main extends Application {
+
+    @Override
+    public void start(Stage primaryStage) {
+        LoginView loginView = new LoginView(primaryStage);
+        loginView.show();
+    }
+
     public static void main(String[] args) {
-        ConsoleMenu menu = new ConsoleMenu();
-        menu.start();
+        launch(args);
     }
 }
