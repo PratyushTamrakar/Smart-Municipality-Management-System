@@ -1,129 +1,107 @@
 package dao;
 
-import util.DatabaseConnection;
 import model.Complaint;
-import model.enums.ComplaintCategory;
-import model.enums.ComplaintStatus;
+import util.DatabaseConnection;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 public class ComplaintDAOImpl implements ComplaintDAO {
 
     @Override
-    public boolean createComplaint(Complaint complaint) {
-        String query = "INSERT INTO complaints (citizen_id, category, title, description, ward_number, status) VALUES (?, ?, ?, ?, ?, ?)";
+    public boolean addComplaint(Complaint complaint) {
+        String sql = "INSERT INTO complaints (citizen_id, citizen_name, category, description, ward_no, " +
+                "house_no, status) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
-
-            stmt.setInt(1, complaint.getCitizenId());
-            stmt.setString(2, complaint.getCategory().name());
-            stmt.setString(3, complaint.getTitle());
-            stmt.setString(4, complaint.getDescription());
-            stmt.setInt(5, complaint.getWardNumber());
-            stmt.setString(6, complaint.getStatus().name());
-
-            int affectedRows = stmt.executeUpdate();
-            if (affectedRows > 0) {
-                try (ResultSet rs = stmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        complaint.setComplaintId(rs.getInt(1));
+             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, complaint.getCitizenId());
+            ps.setString(2, complaint.getCitizenName());
+            ps.setString(3, complaint.getCategory());
+            ps.setString(4, complaint.getDescription());
+            ps.setString(5, complaint.getWardNo());
+            ps.setString(6, complaint.getHouseNo());
+            ps.setString(7, complaint.getStatus() == null ? "PENDING" : complaint.getStatus());
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                try (ResultSet keys = ps.getGeneratedKeys()) {
+                    if (keys.next()) {
+                        complaint.setId(keys.getInt(1));
                     }
                 }
-                return true;
             }
+            return rows > 0;
         } catch (SQLException e) {
-            System.err.println("❌ Error creating complaint: " + e.getMessage());
+            e.printStackTrace();
+            return false;
         }
-        return false;
     }
 
     @Override
-    public Optional<Complaint> getComplaintById(int complaintId) {
-        String query = "SELECT * FROM complaints WHERE complaint_id = ?";
+    public List<Complaint> getComplaintsByCitizen(int citizenId) {
+        List<Complaint> list = new ArrayList<>();
+        String sql = "SELECT * FROM complaints WHERE citizen_id = ? ORDER BY created_at DESC";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            stmt.setInt(1, complaintId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return Optional.of(mapResultSetToComplaint(rs));
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("❌ Error fetching complaint: " + e.getMessage());
-        }
-        return Optional.empty();
-    }
-
-    @Override
-    public List<Complaint> getComplaintsByCitizenId(int citizenId) {
-        List<Complaint> complaints = new ArrayList<>();
-        String query = "SELECT * FROM complaints WHERE citizen_id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            stmt.setInt(1, citizenId);
-            try (ResultSet rs = stmt.executeQuery()) {
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, citizenId);
+            try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    complaints.add(mapResultSetToComplaint(rs));
+                    list.add(mapRow(rs));
                 }
             }
         } catch (SQLException e) {
-            System.err.println("❌ Error fetching citizen complaints: " + e.getMessage());
+            e.printStackTrace();
         }
-        return complaints;
+        return list;
     }
 
     @Override
     public List<Complaint> getAllComplaints() {
-        List<Complaint> complaints = new ArrayList<>();
-        String query = "SELECT * FROM complaints";
+        List<Complaint> list = new ArrayList<>();
+        String sql = "SELECT * FROM complaints ORDER BY created_at DESC";
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
-
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                complaints.add(mapResultSetToComplaint(rs));
+                list.add(mapRow(rs));
             }
         } catch (SQLException e) {
-            System.err.println("❌ Error fetching all complaints: " + e.getMessage());
+            e.printStackTrace();
         }
-        return complaints;
+        return list;
     }
 
     @Override
-    public boolean updateComplaintStatus(int complaintId, ComplaintStatus newStatus) {
-        String query = "UPDATE complaints SET status = ? WHERE complaint_id = ?";
+    public boolean updateComplaintStatus(int complaintId, String status) {
+        String sql = "UPDATE complaints SET status = ? WHERE id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            stmt.setString(1, newStatus.name());
-            stmt.setInt(2, complaintId);
-
-            return stmt.executeUpdate() > 0;
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, status);
+            ps.setInt(2, complaintId);
+            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("❌ Error updating complaint status: " + e.getMessage());
+            e.printStackTrace();
+            return false;
         }
-        return false;
     }
 
-    private Complaint mapResultSetToComplaint(ResultSet rs) throws SQLException {
-        Complaint c = new Complaint();
-        c.setComplaintId(rs.getInt("complaint_id"));
-        c.setCitizenId(rs.getInt("citizen_id"));
-        c.setCategory(ComplaintCategory.valueOf(rs.getString("category")));
-        c.setTitle(rs.getString("title"));
-        c.setDescription(rs.getString("description"));
-        c.setWardNumber(rs.getInt("ward_number"));
-        c.setStatus(ComplaintStatus.valueOf(rs.getString("status")));
-
-        Timestamp timestamp = rs.getTimestamp("created_at");
-        if (timestamp != null) {
-            c.setCreatedAt(timestamp.toLocalDateTime());
-        }
-        return c;
+    private Complaint mapRow(ResultSet rs) throws SQLException {
+        Timestamp createdAt = rs.getTimestamp("created_at");
+        return new Complaint(
+                rs.getInt("id"),
+                rs.getInt("citizen_id"),
+                rs.getString("citizen_name"),
+                rs.getString("category"),
+                rs.getString("description"),
+                rs.getString("ward_no"),
+                rs.getString("house_no"),
+                rs.getString("status"),
+                createdAt
+        );
     }
 }

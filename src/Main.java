@@ -6,8 +6,7 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        LoginView loginView = new LoginView(primaryStage);
-        loginView.show();
+        new LoginView().show(primaryStage);
     }
 
     public static void main(String[] args) {

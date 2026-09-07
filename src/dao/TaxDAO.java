@@ -1,10 +1,14 @@
 package dao;
 
-import model.TaxPayment;
+import model.Payment;
+
 import java.util.List;
 
-public interface TaxDAO {
-    boolean payTax(TaxPayment payment);
-    List<TaxPayment> getPaymentsByCitizenId(int citizenId);
-    List<TaxPayment> getAllPayments();
+public interface TaxDAO extends MunicipalDAO {
+
+    boolean makePayment(Payment payment);
+
+    List<Payment> getPaymentsByCitizen(int citizenId);
+
+    List<Payment> getAllPayments();
 }

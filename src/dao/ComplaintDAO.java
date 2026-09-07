@@ -1,14 +1,16 @@
 package dao;
 
 import model.Complaint;
-import model.enums.ComplaintStatus;
-import java.util.List;
-import java.util.Optional;
 
-public interface ComplaintDAO {
-    boolean createComplaint(Complaint complaint);
-    Optional<Complaint> getComplaintById(int complaintId);
-    List<Complaint> getComplaintsByCitizenId(int citizenId);
+import java.util.List;
+
+public interface ComplaintDAO extends MunicipalDAO {
+
+    boolean addComplaint(Complaint complaint);
+
+    List<Complaint> getComplaintsByCitizen(int citizenId);
+
     List<Complaint> getAllComplaints();
-    boolean updateComplaintStatus(int complaintId, ComplaintStatus newStatus);
+
+    boolean updateComplaintStatus(int complaintId, String status);
 }

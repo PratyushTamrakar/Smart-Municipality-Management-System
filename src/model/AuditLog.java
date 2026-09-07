@@ -3,33 +3,67 @@ package model;
 import java.sql.Timestamp;
 
 public class AuditLog {
+
     private int logId;
     private int userId;
-    private String actionType;
-    private String description;
-    private Timestamp createdAt;
+    private String userRole;
+    private String action;
+    private Timestamp timestamp;
 
-    public AuditLog() {}
-
-    public AuditLog(int userId, String actionType, String description) {
-        this.userId = userId;
-        this.actionType = actionType;
-        this.description = description;
+    public AuditLog() {
     }
 
-    // Getters and Setters
-    public int getLogId() { return logId; }
-    public void setLogId(int logId) { this.logId = logId; }
+    public AuditLog(int userId, String userRole, String action) {
+        this.userId = userId;
+        this.userRole = userRole;
+        this.action = action;
+    }
 
-    public int getUserId() { return userId; }
-    public void setUserId(int userId) { this.userId = userId; }
+    public AuditLog(int logId, int userId, String userRole, String action, Timestamp timestamp) {
+        this.logId = logId;
+        this.userId = userId;
+        this.userRole = userRole;
+        this.action = action;
+        this.timestamp = timestamp;
+    }
 
-    public String getActionType() { return actionType; }
-    public void setActionType(String actionType) { this.actionType = actionType; }
+    public int getLogId() {
+        return logId;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public void setLogId(int logId) {
+        this.logId = logId;
+    }
 
-    public Timestamp getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
+    public int getUserId() {
+        return userId;
+    }
+
+    public void setUserId(int userId) {
+        this.userId = userId;
+    }
+
+    public String getUserRole() {
+        return userRole;
+    }
+
+    public void setUserRole(String userRole) {
+        this.userRole = userRole;
+    }
+
+    public String getAction() {
+        return action;
+    }
+
+    public void setAction(String action) {
+        this.action = action;
+    }
+
+    public Timestamp getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(Timestamp timestamp) {
+        this.timestamp = timestamp;
+    }
 }

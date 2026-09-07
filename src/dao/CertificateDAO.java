@@ -1,11 +1,16 @@
 package dao;
 
-import model.CertificateApplication;
+import model.Certificate;
+
 import java.util.List;
 
-public interface CertificateDAO {
-    boolean applyForCertificate(CertificateApplication app);
-    List<CertificateApplication> getApplicationsByCitizenId(int citizenId);
-    List<CertificateApplication> getAllApplications();
-    boolean updateApplicationStatus(int applicationId, String status);
+public interface CertificateDAO extends MunicipalDAO {
+
+    boolean applyCertificate(Certificate certificate);
+
+    List<Certificate> getApplicationsByCitizen(int citizenId);
+
+    List<Certificate> getAllApplications();
+
+    boolean updateCertificateStatus(int applicationId, String status);
 }

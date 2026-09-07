@@ -1,79 +1,69 @@
-DROP DATABASE IF EXISTS smart_municipality_db;
-CREATE DATABASE smart_municipality_db;
-USE smart_municipality_db;
+CREATE DATABASE IF NOT EXISTS kasthamandap_municipality;
+USE kasthamandap_municipality;
 
-CREATE TABLE users (
-                       user_id INT AUTO_INCREMENT PRIMARY KEY,
-                       full_name VARCHAR(100) NOT NULL,
-                       email VARCHAR(100) UNIQUE NOT NULL,
-                       password VARCHAR(255) NOT NULL,
-                       role VARCHAR(20) DEFAULT 'CITIZEN'
-);
+CREATE TABLE IF NOT EXISTS users (
+                                     id INT PRIMARY KEY AUTO_INCREMENT,
+                                     full_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('CITIZEN', 'OFFICER') NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
 
-CREATE TABLE citizens (
-                          citizen_id INT PRIMARY KEY,
-                          full_name VARCHAR(100) NOT NULL,
-                          email VARCHAR(100) UNIQUE NOT NULL,
-                          phone VARCHAR(20),
-                          ward_number INT DEFAULT 1,
-                          FOREIGN KEY (citizen_id) REFERENCES users(user_id) ON DELETE CASCADE
-);
-
-CREATE TABLE complaints (
-                            complaint_id INT AUTO_INCREMENT PRIMARY KEY,
-                            citizen_id INT NOT NULL,
-                            category VARCHAR(50) NOT NULL,
-                            title VARCHAR(150) NOT NULL,
-                            description TEXT NOT NULL,
-                            ward_number INT NOT NULL,
-                            status VARCHAR(20) DEFAULT 'PENDING',
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            FOREIGN KEY (citizen_id) REFERENCES users(user_id) ON DELETE CASCADE
-);
-
+CREATE TABLE IF NOT EXISTS complaints (
+                                          id INT PRIMARY KEY AUTO_INCREMENT,
+                                          citizen_id INT NOT NULL,
+                                          citizen_name VARCHAR(100),
+    category VARCHAR(50) NOT NULL,       -- Electricity / Water / Waste / Dispute with Neighbours
+    description TEXT NOT NULL,
+    ward_no VARCHAR(20),
+    house_no VARCHAR(20),
+    status ENUM('PENDING', 'IN_PROGRESS', 'RESOLVED') DEFAULT 'PENDING',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (citizen_id) REFERENCES users(id) ON DELETE CASCADE
+    );
 
 CREATE TABLE IF NOT EXISTS certificate_applications (
-                                                        application_id INT AUTO_INCREMENT PRIMARY KEY,
+                                                        application_id INT PRIMARY KEY AUTO_INCREMENT,
                                                         citizen_id INT NOT NULL,
-                                                        certificate_type VARCHAR(50) NOT NULL,
-    applicant_name VARCHAR(100) NOT NULL,
-    details TEXT NOT NULL,
-    status VARCHAR(20) DEFAULT 'PENDING',
-    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (citizen_id) REFERENCES users(user_id) ON DELETE CASCADE
+                                                        certificate_type VARCHAR(30) NOT NULL,   -- Birth Certificate / Death Certificate
+    person_name VARCHAR(100) NOT NULL,
+    relation VARCHAR(50) NOT NULL,
+    citizenship_number VARCHAR(50) NULL,     -- required for Death
+    hospital_reg_number VARCHAR(50) NULL,    -- required for Birth
+    status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (citizen_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
-
-CREATE TABLE IF NOT EXISTS tax_payments (
-                                            payment_id INT AUTO_INCREMENT PRIMARY KEY,
-                                            citizen_id INT NOT NULL,
-                                            tax_type VARCHAR(50) NOT NULL,
-    amount DECIMAL(10, 2) NOT NULL,
+CREATE TABLE IF NOT EXISTS payments (
+                                        payment_id INT PRIMARY KEY AUTO_INCREMENT,
+                                        citizen_id INT NOT NULL,
+                                        citizen_name VARCHAR(100),
+    payment_type VARCHAR(50) NOT NULL,   -- Waste Management Fee / Vehicle Tax / Business Tax / Property Tax
+    details TEXT,
+    ward_no VARCHAR(20),
+    house_no VARCHAR(20),
+    months INT NULL,
+    vehicle_cc INT NULL,
+    business_type VARCHAR(100) NULL,
+    business_tier VARCHAR(30) NULL,
+    property_value DOUBLE NULL,
+    amount DOUBLE NOT NULL,
+    gateway VARCHAR(30) NOT NULL,        -- eSewa / Khalti / Connect IPS
     payment_status VARCHAR(20) DEFAULT 'PAID',
     payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (citizen_id) REFERENCES users(user_id) ON DELETE CASCADE
+    FOREIGN KEY (citizen_id) REFERENCES users(id) ON DELETE CASCADE
     );
-USE smart_municipality_db;
 
--- 1. Create Audit Logs table for system traceability
 CREATE TABLE IF NOT EXISTS audit_logs (
-                                          log_id INT AUTO_INCREMENT PRIMARY KEY,
+                                          log_id INT PRIMARY KEY AUTO_INCREMENT,
                                           user_id INT NOT NULL,
-                                          action_type VARCHAR(50) NOT NULL,
-    description TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                                          user_role VARCHAR(50) NOT NULL,
+    action VARCHAR(255) NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
--- 2. Create Notifications table for Citizen updates
-CREATE TABLE IF NOT EXISTS notifications (
-                                             notification_id INT AUTO_INCREMENT PRIMARY KEY,
-                                             user_id INT NOT NULL,
-                                             message TEXT NOT NULL,
-                                             is_read BOOLEAN DEFAULT FALSE,
-                                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                             FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-    );
-
--- 3. Modify Users table password column to accommodate BCrypt hash strings (60 chars)
-ALTER TABLE users MODIFY COLUMN password VARCHAR(255) NOT NULL;
+-- Sample officer account for testing (password: officer123)
+INSERT INTO users (full_name, email, password, role)
+VALUES ('Officer Sharma', 'officer@kasthamandap.gov.np', 'officer123', 'OFFICER');

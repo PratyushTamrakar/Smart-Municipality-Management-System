@@ -1,52 +1,58 @@
 package dao;
 
-import model.CertificateApplication;
+import model.Certificate;
 import util.DatabaseConnection;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
 public class CertificateDAOImpl implements CertificateDAO {
 
     @Override
-    public boolean applyForCertificate(CertificateApplication app) {
-        String sql = "INSERT INTO certificate_applications (citizen_id, certificate_type, applicant_name, details, status) VALUES (?, ?, ?, ?, ?)";
+    public boolean applyCertificate(Certificate certificate) {
+        String sql = "INSERT INTO certificate_applications (citizen_id, certificate_type, person_name, " +
+                "relation, citizenship_number, hospital_reg_number, status) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-
-            stmt.setInt(1, app.getCitizenId());
-            stmt.setString(2, app.getCertificateType());
-            stmt.setString(3, app.getApplicantName());
-            stmt.setString(4, app.getDetails());
-            stmt.setString(5, app.getStatus());
-
-            int affectedRows = stmt.executeUpdate();
-            if (affectedRows > 0) {
-                try (ResultSet rs = stmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        app.setApplicationId(rs.getInt(1));
+             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, certificate.getCitizenId());
+            ps.setString(2, certificate.getCertificateType());
+            ps.setString(3, certificate.getPersonName());
+            ps.setString(4, certificate.getRelation());
+            ps.setString(5, certificate.getCitizenshipNumber());
+            ps.setString(6, certificate.getHospitalRegNumber());
+            ps.setString(7, certificate.getStatus() == null ? "PENDING" : certificate.getStatus());
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                try (ResultSet keys = ps.getGeneratedKeys()) {
+                    if (keys.next()) {
+                        certificate.setApplicationId(keys.getInt(1));
                     }
                 }
-                return true;
             }
+            return rows > 0;
         } catch (SQLException e) {
             e.printStackTrace();
+            return false;
         }
-        return false;
     }
 
     @Override
-    public List<CertificateApplication> getApplicationsByCitizenId(int citizenId) {
-        List<CertificateApplication> list = new ArrayList<>();
-        String sql = "SELECT * FROM certificate_applications WHERE citizen_id = ? ORDER BY applied_at DESC";
+    public List<Certificate> getApplicationsByCitizen(int citizenId) {
+        List<Certificate> list = new ArrayList<>();
+        String sql = "SELECT * FROM certificate_applications WHERE citizen_id = ? ORDER BY created_at DESC";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, citizenId);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                list.add(mapResultSetToApplication(rs));
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, citizenId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -55,15 +61,14 @@ public class CertificateDAOImpl implements CertificateDAO {
     }
 
     @Override
-    public List<CertificateApplication> getAllApplications() {
-        List<CertificateApplication> list = new ArrayList<>();
-        String sql = "SELECT * FROM certificate_applications ORDER BY applied_at DESC";
+    public List<Certificate> getAllApplications() {
+        List<Certificate> list = new ArrayList<>();
+        String sql = "SELECT * FROM certificate_applications ORDER BY created_at DESC";
         try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                list.add(mapResultSetToApplication(rs));
+                list.add(mapRow(rs));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -72,29 +77,31 @@ public class CertificateDAOImpl implements CertificateDAO {
     }
 
     @Override
-    public boolean updateApplicationStatus(int applicationId, String status) {
+    public boolean updateCertificateStatus(int applicationId, String status) {
         String sql = "UPDATE certificate_applications SET status = ? WHERE application_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, status);
-            stmt.setInt(2, applicationId);
-            return stmt.executeUpdate() > 0;
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, status);
+            ps.setInt(2, applicationId);
+            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
+            return false;
         }
-        return false;
     }
 
-    private CertificateApplication mapResultSetToApplication(ResultSet rs) throws SQLException {
-        CertificateApplication app = new CertificateApplication();
-        app.setApplicationId(rs.getInt("application_id"));
-        app.setCitizenId(rs.getInt("citizen_id"));
-        app.setCertificateType(rs.getString("certificate_type"));
-        app.setApplicantName(rs.getString("applicant_name"));
-        app.setDetails(rs.getString("details"));
-        app.setStatus(rs.getString("status"));
-        app.setAppliedAt(rs.getTimestamp("applied_at"));
-        return app;
+    private Certificate mapRow(ResultSet rs) throws SQLException {
+        Timestamp createdAt = rs.getTimestamp("created_at");
+        return new Certificate(
+                rs.getInt("application_id"),
+                rs.getInt("citizen_id"),
+                rs.getString("certificate_type"),
+                rs.getString("person_name"),
+                rs.getString("relation"),
+                rs.getString("citizenship_number"),
+                rs.getString("hospital_reg_number"),
+                rs.getString("status"),
+                createdAt
+        );
     }
 }

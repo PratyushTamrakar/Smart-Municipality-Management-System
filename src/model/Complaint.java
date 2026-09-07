@@ -1,50 +1,115 @@
 package model;
 
-import model.enums.ComplaintCategory;
-import model.enums.ComplaintStatus;
-import java.time.LocalDateTime;
+import java.sql.Timestamp;
 
 public class Complaint {
-    private int complaintId;
+
+    private int id;
     private int citizenId;
-    private ComplaintCategory category;
-    private String title;
+    private String citizenName;
+    private String category;    // e.g. "Electricity", "Water", "Waste", "Dispute with Neighbours"
     private String description;
-    private int wardNumber;
-    private ComplaintStatus status = ComplaintStatus.PENDING;
-    private LocalDateTime createdAt;
+    private String wardNo;
+    private String houseNo;
+    private String status;      // PENDING, IN_PROGRESS, RESOLVED
+    private Timestamp createdAt;
 
-    public Complaint() {}
-
-    public Complaint(int citizenId, ComplaintCategory category, String title, String description, int wardNumber) {
-        this.citizenId = citizenId;
-        this.category = category;
-        this.title = title;
-        this.description = description;
-        this.wardNumber = wardNumber;
+    public Complaint() {
     }
 
-    public int getComplaintId() { return complaintId; }
-    public void setComplaintId(int complaintId) { this.complaintId = complaintId; }
+    public Complaint(int id, int citizenId, String citizenName, String category, String description,
+                     String wardNo, String houseNo, String status, Timestamp createdAt) {
+        this.id = id;
+        this.citizenId = citizenId;
+        this.citizenName = citizenName;
+        this.category = category;
+        this.description = description;
+        this.wardNo = wardNo;
+        this.houseNo = houseNo;
+        this.status = status;
+        this.createdAt = createdAt;
+    }
 
-    public int getCitizenId() { return citizenId; }
-    public void setCitizenId(int citizenId) { this.citizenId = citizenId; }
+    public Complaint(int citizenId, String citizenName, String category, String description,
+                     String wardNo, String houseNo) {
+        this.citizenId = citizenId;
+        this.citizenName = citizenName;
+        this.category = category;
+        this.description = description;
+        this.wardNo = wardNo;
+        this.houseNo = houseNo;
+        this.status = "PENDING";
+    }
 
-    public ComplaintCategory getCategory() { return category; }
-    public void setCategory(ComplaintCategory category) { this.category = category; }
+    public int getId() {
+        return id;
+    }
 
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
+    public void setId(int id) {
+        this.id = id;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public int getCitizenId() {
+        return citizenId;
+    }
 
-    public int getWardNumber() { return wardNumber; }
-    public void setWardNumber(int wardNumber) { this.wardNumber = wardNumber; }
+    public void setCitizenId(int citizenId) {
+        this.citizenId = citizenId;
+    }
 
-    public ComplaintStatus getStatus() { return status; }
-    public void setStatus(ComplaintStatus status) { this.status = status; }
+    public String getCitizenName() {
+        return citizenName;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setCitizenName(String citizenName) {
+        this.citizenName = citizenName;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getWardNo() {
+        return wardNo;
+    }
+
+    public void setWardNo(String wardNo) {
+        this.wardNo = wardNo;
+    }
+
+    public String getHouseNo() {
+        return houseNo;
+    }
+
+    public void setHouseNo(String houseNo) {
+        this.houseNo = houseNo;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public Timestamp getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Timestamp createdAt) {
+        this.createdAt = createdAt;
+    }
 }
