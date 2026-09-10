@@ -50,12 +50,12 @@ Built as a core **Object-Oriented Programming (OOP)** project, it strictly follo
 Developed by **Team Babbal** — **KFA Business School and IT**
 **Submitted To:** Mr. Sanju Shrestha
 
-| Name               | Role / Module Responsibility                        |
-| :----------------- | :-------------------------------------------------- |
-| **Ruben Bhattarai**    | Project Lead, Database Architect & Backend Structure |
-| **Aava Shrestha**      | Authentication, Security & Audit Logging             |
-| **Nishan Subedi**      | Citizen Services, UI Development & Complaint Module  |
-| **Pratyush Tamrakar**  | Financial Module, Auto-Calculation & Officer Console |
+| Name                  | Role / Module Responsibility                        |
+|:----------------------| :-------------------------------------------------- |
+| **Ruben Bhattarai**   | Project Lead, Database Architect & Backend Structure |
+| **Pratyush Tamrakar** | Authentication, Security & Audit Logging             |
+| **Aava Shrestha**     | Citizen Services, UI Development & Complaint Module  |
+| **Nishan Subedi**     | Financial Module, Auto-Calculation & Officer Console |
 
 ---
 
